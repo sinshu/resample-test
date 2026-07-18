@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="NewNumFlat/NewNumFlat.csproj" Id="02032edc-83bc-4975-9794-849bef0d878a" />
+  <Project Path="OldNumFlat/OldNumFlat.csproj" Id="c731209d-3292-4ed8-aabd-ed58da7caab5" />
+  <Project Path="Runner/Runner.csproj" Id="25afa0b9-9fbe-4986-9384-15221f14c7db" />
+</Solution>
