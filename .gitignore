@@ -4,3 +4,6 @@
 # Build results
 bin
 obj
+
+# Generated comparison data
+artifacts

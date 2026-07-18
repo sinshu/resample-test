@@ -1,34 +1,89 @@
-﻿using System;
+using System;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using NumFlat;
-using NumFlat.IO;
 using NumFlat.SignalProcessing;
 
 public static class Program
 {
-    private static readonly int highSampleRate = 48000;
-    private static readonly int lowSampleRate = 16000;
-
-    private static readonly int sourceSignalLength = 60 * highSampleRate;
+    private const int HighSampleRate = 48000;
+    private const int LowSampleRate = 16000;
+    private const int DurationSeconds = 60;
+    private const int FilterOrder = 50;
+    private const int MeasurementCount = 5;
 
     public static void Main(string[] args)
     {
-        var random = new Random(42);
-        var signal = new Vec<double>(sourceSignalLength);
+        var outputDirectory = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
+        Directory.CreateDirectory(outputDirectory);
+
+        var downsampleSource = CreateSignal(DurationSeconds * HighSampleRate, 42);
+        var upsampleSource = CreateSignal(DurationSeconds * LowSampleRate, 43);
+
+        WarmUp();
+
+        var (downsampled, downsampleMilliseconds) = Measure(downsampleSource, 1, 3);
+        var (upsampled, upsampleMilliseconds) = Measure(upsampleSource, 3, 1);
+
+        WriteSignal(Path.Combine(outputDirectory, "new_downsampled.bin"), downsampled);
+        WriteSignal(Path.Combine(outputDirectory, "new_upsampled.bin"), upsampled);
+
+        Console.WriteLine("NumFlat 1.3.3");
+        Console.WriteLine($"  Downsampling (48 kHz -> 16 kHz): {downsampleMilliseconds.ToString("F3", CultureInfo.InvariantCulture)} ms");
+        Console.WriteLine($"  Upsampling   (16 kHz -> 48 kHz): {upsampleMilliseconds.ToString("F3", CultureInfo.InvariantCulture)} ms");
+    }
+
+    private static Vec<double> CreateSignal(int length, int seed)
+    {
+        var random = new Random(seed);
+        var signal = new Vec<double>(length);
         foreach (ref var value in signal)
         {
             value = random.NextDouble() - 0.5;
         }
 
-        var sw = new Stopwatch();
+        return signal;
+    }
 
-        sw.Start();
-        var resampled = signal.Resample(1, 3, 50);
-        sw.Stop();
+    private static void WarmUp()
+    {
+        var signal = CreateSignal(480, 0);
+        _ = signal.Resample(1, 3, FilterOrder);
+        _ = signal.Resample(3, 1, FilterOrder);
+    }
 
-        WaveFile.Write("new_source.wav", signal, highSampleRate);
-        WaveFile.Write("new_resampled.wav", resampled, lowSampleRate);
+    private static (Vec<double> Result, double MedianMilliseconds) Measure(
+        Vec<double> source,
+        int upsamplingRate,
+        int downsamplingRate)
+    {
+        var elapsedMilliseconds = new double[MeasurementCount];
+        Vec<double> result = default;
 
-        Console.WriteLine(sw.ElapsedMilliseconds);
+        for (var i = 0; i < MeasurementCount; i++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            var stopwatch = Stopwatch.StartNew();
+            result = source.Resample(upsamplingRate, downsamplingRate, FilterOrder);
+            stopwatch.Stop();
+            elapsedMilliseconds[i] = stopwatch.Elapsed.TotalMilliseconds;
+        }
+
+        Array.Sort(elapsedMilliseconds);
+        return (result, elapsedMilliseconds[MeasurementCount / 2]);
+    }
+
+    private static void WriteSignal(string path, Vec<double> signal)
+    {
+        using var writer = new BinaryWriter(File.Create(path));
+        writer.Write(signal.Count);
+        foreach (var value in signal)
+        {
+            writer.Write(value);
+        }
     }
 }
