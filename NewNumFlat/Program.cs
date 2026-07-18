@@ -26,8 +26,8 @@ public static class Program
         var resampled = signal.Resample(1, 3, 50);
         sw.Stop();
 
-        WaveFile.Write("source.wav", signal, highSampleRate);
-        WaveFile.Write("resampled.wav", resampled, lowSampleRate);
+        WaveFile.Write("new_source.wav", signal, highSampleRate);
+        WaveFile.Write("new_resampled.wav", resampled, lowSampleRate);
 
         Console.WriteLine(sw.ElapsedMilliseconds);
     }

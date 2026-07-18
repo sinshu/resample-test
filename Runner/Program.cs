@@ -1,4 +1,6 @@
 ﻿using Zx;
+using NumFlat;
+using NumFlat.IO;
 
 var config = Path.GetDirectoryName(AppContext.BaseDirectory);
 config = Path.GetDirectoryName(config);
@@ -10,8 +12,15 @@ root = Path.GetDirectoryName(root);
 root = Path.GetDirectoryName(root);
 root = Path.GetDirectoryName(root);
 
-var oldNumFlatPath = Path.Combine(root, "OldNumFlat", "bin", config, "net10.0", "OldNumFlat.exe");
-await oldNumFlatPath;
+var oldNumFlatDir = Path.Combine(root, "OldNumFlat", "bin", config, "net10.0");
+var oldNumFlatExe = Path.Combine(oldNumFlatDir, "OldNumFlat.exe");
+await oldNumFlatExe;
 
-var newNumFlatPath = Path.Combine(root, "NewNumFlat", "bin", config, "net10.0", "NewNumFlat.exe");
-await newNumFlatPath;
+var newNumFlatDir = Path.Combine(root, "NewNumFlat", "bin", config, "net10.0");
+var newNumFlatExe = Path.Combine(newNumFlatDir, "NewNumFlat.exe");
+await newNumFlatExe;
+
+var oldNumFlatSignal = WaveFile.ReadMono("old_resampled.wav").Data;
+var newNumFlatSignal = WaveFile.ReadMono("new_resampled.wav").Data;
+var error = (oldNumFlatSignal - newNumFlatSignal).Select(Math.Abs).Max();
+Console.WriteLine(error);
