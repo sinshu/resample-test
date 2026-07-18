@@ -23,8 +23,8 @@ public static class Program
 
         WarmUp();
 
-        var (downsampled, downsampleMilliseconds) = Measure(downsampleSource, 1, 3);
-        var (upsampled, upsampleMilliseconds) = Measure(upsampleSource, 3, 1);
+        var (downsampled, downsampleMilliseconds) = Measure(downsampleSource, LowSampleRate, HighSampleRate);
+        var (upsampled, upsampleMilliseconds) = Measure(upsampleSource, HighSampleRate, LowSampleRate);
 
         WriteSignal(Path.Combine(outputDirectory, "old_downsampled.bin"), downsampled);
         WriteSignal(Path.Combine(outputDirectory, "old_upsampled.bin"), upsampled);
@@ -49,14 +49,14 @@ public static class Program
     private static void WarmUp()
     {
         var signal = CreateSignal(480, 0);
-        _ = signal.Resample(1, 3, FilterOrder);
-        _ = signal.Resample(3, 1, FilterOrder);
+        _ = signal.Resample(LowSampleRate, HighSampleRate, FilterOrder);
+        _ = signal.Resample(HighSampleRate, LowSampleRate, FilterOrder);
     }
 
     private static (Vec<double> Result, double MedianMilliseconds) Measure(
         Vec<double> source,
-        int upsamplingRate,
-        int downsamplingRate)
+        int outputSampleRate,
+        int inputSampleRate)
     {
         var elapsedMilliseconds = new double[MeasurementCount];
         Vec<double> result = default;
@@ -68,7 +68,7 @@ public static class Program
             GC.Collect();
 
             var stopwatch = Stopwatch.StartNew();
-            result = source.Resample(upsamplingRate, downsamplingRate, FilterOrder);
+            result = source.Resample(outputSampleRate, inputSampleRate, FilterOrder);
             stopwatch.Stop();
             elapsedMilliseconds[i] = stopwatch.Elapsed.TotalMilliseconds;
         }
